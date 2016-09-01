@@ -87,9 +87,10 @@ class Reader(object):
 
 
 class NumpyDocString(object):
-    def __init__(self, docstring, config={}):
+    def __init__(self, docstring, config={}, name=None):
         docstring = textwrap.dedent(docstring).split('\n')
 
+        self.name = name
         self._doc = Reader(docstring)
         self._parsed_data = {
             'Signature': '',
@@ -117,7 +118,12 @@ class NumpyDocString(object):
 
     def __setitem__(self,key,val):
         if key not in self._parsed_data:
-            warn("Unknown section %s" % key)
+            msg = 'Unknown section "{}"'.format(key)
+            if self.name is not None:
+                msg += ' at {}:{}'.format(self.name, self._doc._l)
+            else:
+                msg += ' at unkown location'
+            warn(msg)
         else:
             self._parsed_data[key] = val
 
@@ -420,7 +426,7 @@ def header(text, style='-'):
 
 
 class FunctionDoc(NumpyDocString):
-    def __init__(self, func, role='func', doc=None, config={}):
+    def __init__(self, func, role='func', doc=None, config={}, name=None):
         self._f = func
         self._role = role # e.g. "func" or "meth"
 
@@ -428,7 +434,7 @@ class FunctionDoc(NumpyDocString):
             if func is None:
                 raise ValueError("No function or docstring given")
             doc = inspect.getdoc(func) or ''
-        NumpyDocString.__init__(self, doc)
+        NumpyDocString.__init__(self, doc, name=name)
 
         if not self['Signature'] and func is not None:
             func, func_name = self.get_func()
@@ -477,7 +483,7 @@ class ClassDoc(NumpyDocString):
     extra_public_methods = ['__call__']
 
     def __init__(self, cls, doc=None, modulename='', func_doc=FunctionDoc,
-                 config={}):
+                 config={}, name=None):
         if not inspect.isclass(cls) and cls is not None:
             raise ValueError("Expected a class or None, but got %r" % cls)
         self._cls = cls
@@ -491,7 +497,7 @@ class ClassDoc(NumpyDocString):
                 raise ValueError("No class or documentation string given")
             doc = pydoc.getdoc(cls)
 
-        NumpyDocString.__init__(self, doc)
+        NumpyDocString.__init__(self, doc, name=name)
 
         if config.get('show_class_members', True):
             def splitlines_x(s):
