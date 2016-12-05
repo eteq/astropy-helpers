@@ -144,7 +144,8 @@ extensions = [
     'astropy_helpers.sphinx.ext.tocdepthfix',
     'astropy_helpers.sphinx.ext.doctest',
     'astropy_helpers.sphinx.ext.changelog_links',
-    'astropy_helpers.sphinx.ext.smart_resolver']
+    'astropy_helpers.sphinx.ext.smart_resolver',
+    'astropy_helpers.sphinx.ext.partialsphinx']
 
 
 if on_rtd:
@@ -347,3 +348,5 @@ latex_preamble = r"""
 
 # A timeout value, in seconds, for the linkcheck builder
 linkcheck_timeout = 60
+
+partial_build_mod = 'arg'
