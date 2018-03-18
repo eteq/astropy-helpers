@@ -234,11 +234,18 @@ class AstropyBuildDocs(SphinxBuildDoc):
                     # the message appropriately.
                     msg = ('The build_docs travis build FAILED '
                            'because sphinx issued documentation '
-                           'warnings (scroll up to see the warnings).')
+                           'warnings. Scroll up to see the warnings in context.')
+                    if self.warning_file:
+                        msg += 'Warnings/errors are also listed below:\n'
+                        with open(os.path.abspath(self.warning_file)) as f:
+                            msg += f.read()
                 else:  # standard failure message
                     msg = ('build_docs returning a non-zero exit '
                            'code because sphinx issued documentation '
                            'warnings.')
+                    if self.warning_file:
+                        fn = os.path.abspath(self.warning_file)
+                        msg += ' Warnings recorded in file: "{}"'.format(fn)
                 log.warn(msg)
 
         else:
