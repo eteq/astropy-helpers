@@ -50,6 +50,9 @@ class AstropyBuildDocs(SphinxBuildDoc):
         ('open-docs-in-browser', 'o',
          'Open the docs in a browser (using the webbrowser module) if the '
          'build finishes successfully.'))
+    user_options.append(
+        ('warning-file=', None,
+         'A file to write any warnings/errors to (in addition to printing).'))
 
     boolean_options = SphinxBuildDoc.boolean_options[:]
     boolean_options.append('warnings-returncode')
@@ -65,6 +68,7 @@ class AstropyBuildDocs(SphinxBuildDoc):
         self.no_intersphinx = False
         self.open_docs_in_browser = False
         self.warnings_returncode = False
+        self.warning_file = None
 
     def finalize_options(self):
 
@@ -135,11 +139,24 @@ class AstropyBuildDocs(SphinxBuildDoc):
 
         """).format(build_cmd_path=build_cmd_path, ah_path=ah_path,
                     srcdir=self.source_dir)
+        if self.warning_file:
+            # test write to make sure any exception is raised and logged  here
+            # instead of in the subproc
+            with open(os.path.abspath(self.warning_file), 'w') as f:
+                f.write('Test output.  Should be overridden by subproc.')
+            subproccode += textwrap.dedent("""
+                import sys, os
+                from sphinx.util import Tee
+
+                warnfp = open('{warnfile}', 'w')
+                warningtee = Tee(sys.stderr, warnfp)
+                """.format(warnfile=os.path.abspath(self.warning_file)))
+
         # runlines[1:] removes 'def run(self)' on the first line
         subproccode += textwrap.dedent(''.join(runlines[1:]))
 
-        # All "self.foo" in the subprocess code needs to be replaced by the
-        # values taken from the current self in *this* process
+        # Rather hacky: all "self.foo" in the subprocess code needs to be
+        # replaced by the values taken from the current self in *this* process
         subproccode = self._self_iden_rex.split(subproccode)
         for i in range(1, len(subproccode), 2):
             iden = subproccode[i]
@@ -151,6 +168,13 @@ class AstropyBuildDocs(SphinxBuildDoc):
             else:
                 subproccode[i] = repr(val)
         subproccode = ''.join(subproccode)
+
+        if self.warning_file:
+            # VERY hacky: assumes that the text below exists and only in the right
+            # place.  Could change in future sphinxes
+            subproccode = subproccode.replace('confoverrides, status_stream,',
+                                              'confoverrides, status_stream, '
+                                              'warningtee,')
 
         optcode = textwrap.dedent("""
 
